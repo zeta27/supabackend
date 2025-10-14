@@ -1,28 +1,24 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
 
-namespace supa.Models;
-
-[Table("SUPACatAreas", Schema = "dbo")]
-public partial class SUPACatAreas
+namespace supa.Models
 {
-    [Required]
-    [StringLength(50)]
-    public string Darea { get; set; } = null!;
+    [Table("SUPACatAreas", Schema = "dbo")]
+    public class SUPACatAreas
+    {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int IdCatAreas { get; set; }
 
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public int IdCatAreas { get; set; }
+        [Required(ErrorMessage = "El nombre del área es requerido")]
+        [StringLength(50, ErrorMessage = "El nombre del área no puede exceder 50 caracteres")]
+        [Display(Name = "Nombre del Área")]
+        public string Darea { get; set; } = null!;
 
-    [InverseProperty("IdCatAreasNavigation")]
-    public virtual ICollection<SUPACatEntidades> SUPACatEntidades { get; set; } = new List<SUPACatEntidades>();
-
-    [InverseProperty("IdAreaDescargaNavigation")]
-    public virtual ICollection<SUPADescargasA> SUPADescargasA { get; set; } = new List<SUPADescargasA>();
-
-    [InverseProperty("IdAreaPlazaNavigation")]
-    public virtual ICollection<SUPAPlazas> SUPAPlazas { get; set; } = new List<SUPAPlazas>();
+       
+         public virtual ICollection<SUPACatEntidades> SUPACatEntidades { get; set; } = new List<SUPACatEntidades>();
+        public virtual ICollection<SUPADescargasA> SUPADescargasA { get; set; } = new List<SUPADescargasA>();
+         public virtual ICollection<SUPAPlazas> SUPAPlazas { get; set; } = new List<SUPAPlazas>();
+    }
 }
