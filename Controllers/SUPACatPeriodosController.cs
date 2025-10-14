@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,15 +35,17 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatPeriodos>> PostSUPACatPeriodos([FromBody] SUPACatPeriodosRequest request)
+        public async Task<ActionResult<SUPACatPeriodos>> PostSUPACatPeriodos(SUPACatPeriodosViewModel viewModel)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DescripcionPeriodo", (object)request.DescripcionPeriodo ?? DBNull.Value),
-                    new SqlParameter("@FechaInicio", (object)request.FechaInicio ?? DBNull.Value),
-                    new SqlParameter("@FechaTermino", (object)request.FechaTermino ?? DBNull.Value)
+                    new SqlParameter("@DescripcionPeriodo", (object)viewModel.DescripcionPeriodo ?? DBNull.Value),
+                    new SqlParameter("@FechaInicio", (object)viewModel.FechaInicio ?? DBNull.Value),
+                    new SqlParameter("@FechaTermino", (object)viewModel.FechaTermino ?? DBNull.Value)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -61,16 +64,21 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatPeriodos(int id, [FromBody] SUPACatPeriodosRequest request)
+        public async Task<IActionResult> PutSUPACatPeriodos(int id, SUPACatPeriodosViewModel viewModel)
         {
+            if (viewModel.IdCatPeriodos.HasValue && id != viewModel.IdCatPeriodos.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatPeriodos", id),
-                    new SqlParameter("@DescripcionPeriodo", (object)request.DescripcionPeriodo ?? DBNull.Value),
-                    new SqlParameter("@FechaInicio", (object)request.FechaInicio ?? DBNull.Value),
-                    new SqlParameter("@FechaTermino", (object)request.FechaTermino ?? DBNull.Value)
+                    new SqlParameter("@DescripcionPeriodo", (object)viewModel.DescripcionPeriodo ?? DBNull.Value),
+                    new SqlParameter("@FechaInicio", (object)viewModel.FechaInicio ?? DBNull.Value),
+                    new SqlParameter("@FechaTermino", (object)viewModel.FechaTermino ?? DBNull.Value)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -95,12 +103,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatPeriodosRequest
-    {
-        public string? DescripcionPeriodo { get; set; }
-        public DateTime? FechaInicio { get; set; }
-        public DateTime? FechaTermino { get; set; }
     }
 }

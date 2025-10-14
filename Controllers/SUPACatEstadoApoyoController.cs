@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,16 +35,15 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatEstadoApoyo>> PostSUPACatEstadoApoyo([FromBody] SUPACatEstadoApoyoRequest request)
+        public async Task<ActionResult<SUPACatEstadoApoyo>> PostSUPACatEstadoApoyo(SUPACatEstadoApoyoViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DEstadoApoyo))
-                return BadRequest("La descripción del estado de apoyo es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DEstadoApoyo", request.DEstadoApoyo)
+                    new SqlParameter("@DEstadoApoyo", viewModel.DEstadoApoyo)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -62,17 +62,19 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatEstadoApoyo(int id, [FromBody] SUPACatEstadoApoyoRequest request)
+        public async Task<IActionResult> PutSUPACatEstadoApoyo(int id, SUPACatEstadoApoyoViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DEstadoApoyo))
-                return BadRequest("La descripción del estado de apoyo es requerida");
+            if (viewModel.IdCatEstadoApoyo.HasValue && id != viewModel.IdCatEstadoApoyo.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatEstadoApoyo", id),
-                    new SqlParameter("@DEstadoApoyo", request.DEstadoApoyo)
+                    new SqlParameter("@DEstadoApoyo", viewModel.DEstadoApoyo)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -97,10 +99,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatEstadoApoyoRequest
-    {
-        public string DEstadoApoyo { get; set; } = null!;
     }
 }

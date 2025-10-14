@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,16 +35,15 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatAreaDedica>> PostSUPACatAreaDedica([FromBody] SUPACatAreaDedicaRequest request)
+        public async Task<ActionResult<SUPACatAreaDedica>> PostSUPACatAreaDedica(SUPACatAreaDedicaViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DAreaDedica))
-                return BadRequest("La descripción del área dedicada es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DAreaDedica", request.DAreaDedica)
+                    new SqlParameter("@DAreaDedica", viewModel.DAreaDedica)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -62,17 +62,19 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatAreaDedica(int id, [FromBody] SUPACatAreaDedicaRequest request)
+        public async Task<IActionResult> PutSUPACatAreaDedica(int id, SUPACatAreaDedicaViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DAreaDedica))
-                return BadRequest("La descripción del área dedicada es requerida");
+            if (viewModel.IdCatAreaDedica.HasValue && id != viewModel.IdCatAreaDedica.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatAreaDedica", id),
-                    new SqlParameter("@DAreaDedica", request.DAreaDedica)
+                    new SqlParameter("@DAreaDedica", viewModel.DAreaDedica)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -97,10 +99,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatAreaDedicaRequest
-    {
-        public string DAreaDedica { get; set; } = null!;
     }
 }

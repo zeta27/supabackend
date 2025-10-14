@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,20 +35,16 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatTipoApoyo>> PostSUPACatTipoApoyo([FromBody] SUPACatTipoApoyoRequest request)
+        public async Task<ActionResult<SUPACatTipoApoyo>> PostSUPACatTipoApoyo(SUPACatTipoApoyoViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DTipoApoyo))
-                return BadRequest("La descripción del tipo de apoyo es requerida");
-
-            if (string.IsNullOrWhiteSpace(request.FedInter))
-                return BadRequest("El campo FedInter es requerido");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DTipoApoyo", request.DTipoApoyo),
-                    new SqlParameter("@FedInter", request.FedInter)
+                    new SqlParameter("@DTipoApoyo", viewModel.DTipoApoyo),
+                    new SqlParameter("@FedInter", viewModel.FedInter)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -66,21 +63,20 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatTipoApoyo(int id, [FromBody] SUPACatTipoApoyoRequest request)
+        public async Task<IActionResult> PutSUPACatTipoApoyo(int id, SUPACatTipoApoyoViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DTipoApoyo))
-                return BadRequest("La descripción del tipo de apoyo es requerida");
+            if (viewModel.IdCatTipoApoyo.HasValue && id != viewModel.IdCatTipoApoyo.Value)
+                return BadRequest("El ID no coincide con el modelo");
 
-            if (string.IsNullOrWhiteSpace(request.FedInter))
-                return BadRequest("El campo FedInter es requerido");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatTipoApoyo", id),
-                    new SqlParameter("@DTipoApoyo", request.DTipoApoyo),
-                    new SqlParameter("@FedInter", request.FedInter)
+                    new SqlParameter("@DTipoApoyo", viewModel.DTipoApoyo),
+                    new SqlParameter("@FedInter", viewModel.FedInter)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -105,11 +101,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatTipoApoyoRequest
-    {
-        public string DTipoApoyo { get; set; } = null!;
-        public string FedInter { get; set; } = null!;
     }
 }

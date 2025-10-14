@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -17,12 +18,14 @@ namespace supa.Controllers
             _context = context;
         }
 
+        // GET: api/SUPACatNacionalidades
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SUPACatNacionalidades>>> GetSUPACatNacionalidades()
         {
             return await _context.SUPACatNacionalidades.ToListAsync();
         }
 
+        // GET: api/SUPACatNacionalidades/5
         [HttpGet("{id}")]
         public async Task<ActionResult<SUPACatNacionalidades>> GetSUPACatNacionalidades(int id)
         {
@@ -33,19 +36,23 @@ namespace supa.Controllers
             return nacionalidad;
         }
 
+        // POST: api/SUPACatNacionalidades
         [HttpPost]
-        public async Task<ActionResult<SUPACatNacionalidades>> PostSUPACatNacionalidades([FromBody] SUPACatNacionalidadesRequest request)
+        public async Task<ActionResult<SUPACatNacionalidades>> PostSUPACatNacionalidades(
+            SUPACatNacionalidadesViewModel viewModel)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@IdCatNacionalidad", request.IdCatNacionalidad),
-                    new SqlParameter("@DNacionalidad", (object)request.DNacionalidad ?? DBNull.Value)
+                    new SqlParameter("@DNacionalidad", (object)viewModel.DNacionalidad ?? DBNull.Value)
                 };
 
+                // ✅ CORREGIDO: Solo se pasa @DNacionalidad, no @IdCatNacionalidad
                 var result = await _context.Database.SqlQueryRaw<int>(
-                    "EXEC SPSUPA_InsertCatNacionalidades @IdCatNacionalidad, @DNacionalidad",
+                    "EXEC SPSUPA_InsertCatNacionalidades @DNacionalidad",
                     parameters).FirstOrDefaultAsync();
 
                 var nacionalidad = await _context.SUPACatNacionalidades
@@ -59,18 +66,23 @@ namespace supa.Controllers
             }
         }
 
+        // PUT: api/SUPACatNacionalidades/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatNacionalidades(int id, [FromBody] SUPACatNacionalidadesRequest request)
+        public async Task<IActionResult> PutSUPACatNacionalidades(
+            int id,
+            SUPACatNacionalidadesViewModel viewModel)
         {
-            if (id != request.IdCatNacionalidad)
+            if (viewModel.IdCatNacionalidad.HasValue && id != viewModel.IdCatNacionalidad.Value)
                 return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatNacionalidad", id),
-                    new SqlParameter("@DNacionalidad", (object)request.DNacionalidad ?? DBNull.Value)
+                    new SqlParameter("@DNacionalidad", (object)viewModel.DNacionalidad ?? DBNull.Value)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -85,6 +97,7 @@ namespace supa.Controllers
             }
         }
 
+        // DELETE: api/SUPACatNacionalidades/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSUPACatNacionalidades(int id)
         {
@@ -96,11 +109,4 @@ namespace supa.Controllers
             return NoContent();
         }
     }
-
-    public class SUPACatNacionalidadesRequest
-    {
-        public int IdCatNacionalidad { get; set; }
-        public string? DNacionalidad { get; set; }
-    }
 }
-

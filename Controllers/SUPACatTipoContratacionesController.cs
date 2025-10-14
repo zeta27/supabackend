@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,16 +35,15 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatTipoContrataciones>> PostSUPACatTipoContrataciones([FromBody] SUPACatTipoContratacionesRequest request)
+        public async Task<ActionResult<SUPACatTipoContrataciones>> PostSUPACatTipoContrataciones(SUPACatTipoContratacionesViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DTipoContratacion))
-                return BadRequest("La descripción del tipo de contratación es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DTipoContratacion", request.DTipoContratacion)
+                    new SqlParameter("@DTipoContratacion", viewModel.DTipoContratacion)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -62,17 +62,19 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatTipoContrataciones(int id, [FromBody] SUPACatTipoContratacionesRequest request)
+        public async Task<IActionResult> PutSUPACatTipoContrataciones(int id, SUPACatTipoContratacionesViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DTipoContratacion))
-                return BadRequest("La descripción del tipo de contratación es requerida");
+            if (viewModel.IdCatTipoContratacion.HasValue && id != viewModel.IdCatTipoContratacion.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatTipoContratacion", id),
-                    new SqlParameter("@DTipoContratacion", request.DTipoContratacion)
+                    new SqlParameter("@DTipoContratacion", viewModel.DTipoContratacion)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -97,10 +99,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatTipoContratacionesRequest
-    {
-        public string DTipoContratacion { get; set; } = null!;
     }
 }

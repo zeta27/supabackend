@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,16 +35,15 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatTempContrataciones>> PostSUPACatTempContrataciones([FromBody] SUPACatTempContratacionesRequest request)
+        public async Task<ActionResult<SUPACatTempContrataciones>> PostSUPACatTempContrataciones(SUPACatTempContratacionesViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DTempContratacion))
-                return BadRequest("La descripción de la temporalidad de contratación es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DTempContratacion", request.DTempContratacion)
+                    new SqlParameter("@DTempContratacion", viewModel.DTempContratacion)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -62,17 +62,19 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatTempContrataciones(int id, [FromBody] SUPACatTempContratacionesRequest request)
+        public async Task<IActionResult> PutSUPACatTempContrataciones(int id, SUPACatTempContratacionesViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DTempContratacion))
-                return BadRequest("La descripción de la temporalidad de contratación es requerida");
+            if (viewModel.IdCatTempContratacion.HasValue && id != viewModel.IdCatTempContratacion.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatTempContratacion", id),
-                    new SqlParameter("@DTempContratacion", request.DTempContratacion)
+                    new SqlParameter("@DTempContratacion", viewModel.DTempContratacion)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -97,10 +99,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatTempContratacionesRequest
-    {
-        public string DTempContratacion { get; set; } = null!;
     }
 }

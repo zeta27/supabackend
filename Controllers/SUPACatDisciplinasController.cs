@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,13 +35,15 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatDisciplinas>> PostSUPACatDisciplinas([FromBody] SUPACatDisciplinasRequest request)
+        public async Task<ActionResult<SUPACatDisciplinas>> PostSUPACatDisciplinas(SUPACatDisciplinasViewModel viewModel)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@Ddisciplina", (object)request.Ddisciplina ?? DBNull.Value)
+                    new SqlParameter("@Ddisciplina", (object)viewModel.Ddisciplina ?? DBNull.Value)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -59,14 +62,19 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatDisciplinas(int id, [FromBody] SUPACatDisciplinasRequest request)
+        public async Task<IActionResult> PutSUPACatDisciplinas(int id, SUPACatDisciplinasViewModel viewModel)
         {
+            if (viewModel.IdCatDisciplinas.HasValue && id != viewModel.IdCatDisciplinas.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatDisciplinas", id),
-                    new SqlParameter("@Ddisciplina", (object)request.Ddisciplina ?? DBNull.Value)
+                    new SqlParameter("@Ddisciplina", (object)viewModel.Ddisciplina ?? DBNull.Value)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -91,10 +99,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatDisciplinasRequest
-    {
-        public string? Ddisciplina { get; set; }
     }
 }

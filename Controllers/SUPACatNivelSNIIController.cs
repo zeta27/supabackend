@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -17,12 +18,14 @@ namespace supa.Controllers
             _context = context;
         }
 
+        // GET: api/SUPACatNivelSNII
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SUPACatNivelSNII>>> GetSUPACatNivelSNII()
         {
             return await _context.SUPACatNivelSNII.ToListAsync();
         }
 
+        // GET: api/SUPACatNivelSNII/5
         [HttpGet("{id}")]
         public async Task<ActionResult<SUPACatNivelSNII>> GetSUPACatNivelSNII(int id)
         {
@@ -33,19 +36,23 @@ namespace supa.Controllers
             return nivelSNII;
         }
 
+        // POST: api/SUPACatNivelSNII
         [HttpPost]
-        public async Task<ActionResult<SUPACatNivelSNII>> PostSUPACatNivelSNII([FromBody] SUPACatNivelSNIIRequest request)
+        public async Task<ActionResult<SUPACatNivelSNII>> PostSUPACatNivelSNII(
+            SUPACatNivelSNIIViewModel viewModel)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@IdCatNivelSNII", request.IdCatNivelSNII),
-                    new SqlParameter("@DNivelSNII", (object)request.DNivelSNII ?? DBNull.Value)
+                    new SqlParameter("@DNivelSNII", (object)viewModel.DNivelSNII ?? DBNull.Value)
                 };
 
+                // ✅ CORREGIDO: Solo se pasa @DNivelSNII, no @IdCatNivelSNII
                 var result = await _context.Database.SqlQueryRaw<int>(
-                    "EXEC SPSUPA_InsertCatNivelSNII @IdCatNivelSNII, @DNivelSNII",
+                    "EXEC SPSUPA_InsertCatNivelSNII @DNivelSNII",
                     parameters).FirstOrDefaultAsync();
 
                 var nivelSNII = await _context.SUPACatNivelSNII
@@ -59,18 +66,23 @@ namespace supa.Controllers
             }
         }
 
+        // PUT: api/SUPACatNivelSNII/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatNivelSNII(int id, [FromBody] SUPACatNivelSNIIRequest request)
+        public async Task<IActionResult> PutSUPACatNivelSNII(
+            int id,
+            SUPACatNivelSNIIViewModel viewModel)
         {
-            if (id != request.IdCatNivelSNII)
+            if (viewModel.IdCatNivelSNII.HasValue && id != viewModel.IdCatNivelSNII.Value)
                 return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatNivelSNII", id),
-                    new SqlParameter("@DNivelSNII", (object)request.DNivelSNII ?? DBNull.Value)
+                    new SqlParameter("@DNivelSNII", (object)viewModel.DNivelSNII ?? DBNull.Value)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -85,6 +97,7 @@ namespace supa.Controllers
             }
         }
 
+        // DELETE: api/SUPACatNivelSNII/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSUPACatNivelSNII(int id)
         {
@@ -95,11 +108,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatNivelSNIIRequest
-    {
-        public int IdCatNivelSNII { get; set; }
-        public string? DNivelSNII { get; set; }
     }
 }

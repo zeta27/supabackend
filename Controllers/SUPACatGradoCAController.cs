@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,20 +35,16 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatGradoCA>> PostSUPACatGradoCA([FromBody] SUPACatGradoCARequest request)
+        public async Task<ActionResult<SUPACatGradoCA>> PostSUPACatGradoCA(SUPACatGradoCAViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DescripcionGrado))
-                return BadRequest("La descripción del grado es requerida");
-
-            if (string.IsNullOrWhiteSpace(request.Abreviatura))
-                return BadRequest("La abreviatura del grado es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DescripcionGrado", request.DescripcionGrado),
-                    new SqlParameter("@Abreviatura", request.Abreviatura)
+                    new SqlParameter("@DescripcionGrado", viewModel.DescripcionGrado),
+                    new SqlParameter("@Abreviatura", viewModel.Abreviatura)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -66,21 +63,20 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatGradoCA(int id, [FromBody] SUPACatGradoCARequest request)
+        public async Task<IActionResult> PutSUPACatGradoCA(int id, SUPACatGradoCAViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DescripcionGrado))
-                return BadRequest("La descripción del grado es requerida");
+            if (viewModel.IdCatGradoCA.HasValue && id != viewModel.IdCatGradoCA.Value)
+                return BadRequest("El ID no coincide con el modelo");
 
-            if (string.IsNullOrWhiteSpace(request.Abreviatura))
-                return BadRequest("La abreviatura del grado es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatGradoCA", id),
-                    new SqlParameter("@DescripcionGrado", request.DescripcionGrado),
-                    new SqlParameter("@Abreviatura", request.Abreviatura)
+                    new SqlParameter("@DescripcionGrado", viewModel.DescripcionGrado),
+                    new SqlParameter("@Abreviatura", viewModel.Abreviatura)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -105,11 +101,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatGradoCARequest
-    {
-        public string DescripcionGrado { get; set; } = null!;
-        public string Abreviatura { get; set; } = null!;
     }
 }

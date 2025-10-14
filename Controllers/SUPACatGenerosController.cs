@@ -1,13 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
-using Microsoft.Data.SqlClient;
+using supa.Models.ViewModels;
 
 namespace supa.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class SUPACatGenerosController : ControllerBase
     {
         private readonly SUPADbContext _context;
@@ -18,89 +19,115 @@ namespace supa.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SUPACatGeneros>>> GetSUPACatGeneros()
+        public async Task<IActionResult> Listado()
         {
-            return await _context.SUPACatGeneros.ToListAsync();
-        }
-
-        [HttpGet("{id}")]
-        public async Task<ActionResult<SUPACatGeneros>> GetSUPACatGeneros(int id)
-        {
-            var genero = await _context.SUPACatGeneros
-                .FirstOrDefaultAsync(g => g.IdCatGeneros == id);
-
-            if (genero == null) return NotFound();
-            return genero;
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<SUPACatGeneros>> PostSUPACatGeneros([FromBody] SUPACatGenerosRequest request)
-        {
-            if (string.IsNullOrWhiteSpace(request.DGenero))
-                return BadRequest("La descripción del género es requerida");
-
             try
             {
-                var parameters = new[]
-                {
-                    new SqlParameter("@DGenero", request.DGenero)
-                };
-
-                var result = await _context.Database.SqlQueryRaw<int>(
-                    "EXEC SPSUPA_InsertCatGeneros @DGenero",
-                    parameters).FirstOrDefaultAsync();
-
-                var genero = await _context.SUPACatGeneros
-                    .FirstOrDefaultAsync(g => g.IdCatGeneros == result);
-
-                return CreatedAtAction(nameof(GetSUPACatGeneros), new { id = result }, genero);
+                var generos = await _context.SUPACatGeneros.ToListAsync();
+                return Ok(generos);
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error al crear el género: {ex.Message}");
+                return StatusCode(500, new { message = "Error interno del servidor", error = ex.Message });
+            }
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> ListadoporId(int id)
+        {
+            try
+            {
+                var genero = await _context.SUPACatGeneros.FindAsync(id);
+                if (genero == null)
+                {
+                    return NotFound(new { message = $"No se encontró el género con ID {id}" });
+                }
+                return Ok(genero);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error interno del servidor", error = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] SUPACatGenerosViewModel viewModel)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var parameters = new[]
+                {
+                    new SqlParameter("@DGenero", viewModel.DGenero)
+                };
+
+                var result = await _context.Database
+                    .SqlQueryRaw<int>("EXEC SPSUPA_InsertCatGeneros @DGenero", parameters)
+                    .ToListAsync();
+
+                var newId = result.FirstOrDefault();
+
+                var generoCreado = await _context.SUPACatGeneros
+                    .FirstOrDefaultAsync(g => g.IdCatGeneros == newId);
+
+                return CreatedAtAction(nameof(ListadoporId), new { id = newId }, generoCreado);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al crear el género", error = ex.Message });
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatGeneros(int id, [FromBody] SUPACatGenerosRequest request)
+        public async Task<IActionResult> Update(int id, [FromBody] SUPACatGenerosViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DGenero))
-                return BadRequest("La descripción del género es requerida");
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatGeneros", id),
-                    new SqlParameter("@DGenero", request.DGenero)
+                    new SqlParameter("@DGenero", viewModel.DGenero)
                 };
 
-                await _context.Database.ExecuteSqlRawAsync(
-                    "EXEC SPSUPA_UpdateCatGeneros @IdCatGeneros, @DGenero",
-                    parameters);
+                await _context.Database.ExecuteSqlRawAsync("EXEC SPSUPA_UpdateCatGeneros @IdCatGeneros, @DGenero", parameters);
 
-                return NoContent();
+                return Ok(new { message = "Género actualizado correctamente" });
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error al actualizar el género: {ex.Message}");
+                return StatusCode(500, new { message = "Error al actualizar el género", error = ex.Message });
             }
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSUPACatGeneros(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var genero = await _context.SUPACatGeneros.FindAsync(id);
-            if (genero == null) return NotFound();
+            try
+            {
+                var genero = await _context.SUPACatGeneros.FindAsync(id);
+                if (genero == null)
+                {
+                    return NotFound(new { message = $"No se encontró el género con ID {id}" });
+                }
 
-            _context.SUPACatGeneros.Remove(genero);
-            await _context.SaveChangesAsync();
-            return NoContent();
+                _context.SUPACatGeneros.Remove(genero);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Género eliminado correctamente" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al eliminar el género", error = ex.Message });
+            }
         }
-    }
-
-    public class SUPACatGenerosRequest
-    {
-        public string DGenero { get; set; } = null!;
     }
 }

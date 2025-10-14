@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,16 +35,15 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatMotivos>> PostSUPACatMotivos([FromBody] SUPACatMotivosRequest request)
+        public async Task<ActionResult<SUPACatMotivos>> PostSUPACatMotivos(SUPACatMotivosViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DMotivos))
-                return BadRequest("La descripción del motivo es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DMotivos", request.DMotivos)
+                    new SqlParameter("@DMotivos", viewModel.DMotivos)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -62,17 +62,19 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatMotivos(int id, [FromBody] SUPACatMotivosRequest request)
+        public async Task<IActionResult> PutSUPACatMotivos(int id, SUPACatMotivosViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DMotivos))
-                return BadRequest("La descripción del motivo es requerida");
+            if (viewModel.IdCatMotivos.HasValue && id != viewModel.IdCatMotivos.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatMotivos", id),
-                    new SqlParameter("@DMotivos", request.DMotivos)
+                    new SqlParameter("@DMotivos", viewModel.DMotivos)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -97,10 +99,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatMotivosRequest
-    {
-        public string DMotivos { get; set; } = null!;
     }
 }

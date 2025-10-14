@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -17,12 +18,14 @@ namespace supa.Controllers
             _context = context;
         }
 
+        // GET: api/SUPACatRegion
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SUPACatRegion>>> GetSUPACatRegion()
         {
             return await _context.SUPACatRegion.ToListAsync();
         }
 
+        // GET: api/SUPACatRegion/5
         [HttpGet("{id}")]
         public async Task<ActionResult<SUPACatRegion>> GetSUPACatRegion(int id)
         {
@@ -33,19 +36,23 @@ namespace supa.Controllers
             return region;
         }
 
+        // POST: api/SUPACatRegion
         [HttpPost]
-        public async Task<ActionResult<SUPACatRegion>> PostSUPACatRegion([FromBody] SUPACatRegionRequest request)
+        public async Task<ActionResult<SUPACatRegion>> PostSUPACatRegion(
+            SUPACatRegionViewModel viewModel)
         {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@IdCatRegion", request.IdCatRegion),
-                    new SqlParameter("@Dregion", (object)request.Dregion ?? DBNull.Value)
+                    new SqlParameter("@Dregion", (object)viewModel.Dregion ?? DBNull.Value)
                 };
 
+                // ✅ CORREGIDO: Solo se pasa @Dregion, no @IdCatRegion
                 var result = await _context.Database.SqlQueryRaw<int>(
-                    "EXEC SPSUPA_InsertCatRegion @IdCatRegion, @Dregion",
+                    "EXEC SPSUPA_InsertCatRegion @Dregion",
                     parameters).FirstOrDefaultAsync();
 
                 var region = await _context.SUPACatRegion
@@ -59,18 +66,23 @@ namespace supa.Controllers
             }
         }
 
+        // PUT: api/SUPACatRegion/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatRegion(int id, [FromBody] SUPACatRegionRequest request)
+        public async Task<IActionResult> PutSUPACatRegion(
+            int id,
+            SUPACatRegionViewModel viewModel)
         {
-            if (id != request.IdCatRegion)
+            if (viewModel.IdCatRegion.HasValue && id != viewModel.IdCatRegion.Value)
                 return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatRegion", id),
-                    new SqlParameter("@Dregion", (object)request.Dregion ?? DBNull.Value)
+                    new SqlParameter("@Dregion", (object)viewModel.Dregion ?? DBNull.Value)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -85,6 +97,7 @@ namespace supa.Controllers
             }
         }
 
+        // DELETE: api/SUPACatRegion/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSUPACatRegion(int id)
         {
@@ -95,11 +108,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatRegionRequest
-    {
-        public int IdCatRegion { get; set; }
-        public string? Dregion { get; set; }
     }
 }

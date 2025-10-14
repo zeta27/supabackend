@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
+using supa.Models.ViewModels;
 using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
@@ -34,16 +35,15 @@ namespace supa.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatNivelEstudios>> PostSUPACatNivelEstudios([FromBody] SUPACatNivelEstudiosRequest request)
+        public async Task<ActionResult<SUPACatNivelEstudios>> PostSUPACatNivelEstudios(SUPACatNivelEstudiosViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DescripcionNivelEstudios))
-                return BadRequest("La descripción del nivel de estudios es requerida");
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
-                    new SqlParameter("@DescripcionNivelEstudios", request.DescripcionNivelEstudios)
+                    new SqlParameter("@DescripcionNivelEstudios", viewModel.DescripcionNivelEstudios)
                 };
 
                 var result = await _context.Database.SqlQueryRaw<int>(
@@ -62,17 +62,19 @@ namespace supa.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatNivelEstudios(int id, [FromBody] SUPACatNivelEstudiosRequest request)
+        public async Task<IActionResult> PutSUPACatNivelEstudios(int id, SUPACatNivelEstudiosViewModel viewModel)
         {
-            if (string.IsNullOrWhiteSpace(request.DescripcionNivelEstudios))
-                return BadRequest("La descripción del nivel de estudios es requerida");
+            if (viewModel.IdCatNivelEstudios.HasValue && id != viewModel.IdCatNivelEstudios.Value)
+                return BadRequest("El ID no coincide con el modelo");
+
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             try
             {
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatNivelEstudios", id),
-                    new SqlParameter("@DescripcionNivelEstudios", request.DescripcionNivelEstudios)
+                    new SqlParameter("@DescripcionNivelEstudios", viewModel.DescripcionNivelEstudios)
                 };
 
                 await _context.Database.ExecuteSqlRawAsync(
@@ -97,10 +99,5 @@ namespace supa.Controllers
             await _context.SaveChangesAsync();
             return NoContent();
         }
-    }
-
-    public class SUPACatNivelEstudiosRequest
-    {
-        public string DescripcionNivelEstudios { get; set; } = null!;
     }
 }
