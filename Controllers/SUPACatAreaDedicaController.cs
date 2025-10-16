@@ -1,14 +1,14 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using supa.Data;
 using supa.Models;
 using supa.Models.ViewModels;
-using Microsoft.Data.SqlClient;
 
 namespace supa.Controllers
 {
-    [Route("api/[controller]")]
     [ApiController]
+    [Route("api/[controller]")]
     public class SUPACatAreaDedicaController : ControllerBase
     {
         private readonly SUPADbContext _context;
@@ -19,85 +19,117 @@ namespace supa.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SUPACatAreaDedica>>> GetSUPACatAreaDedica()
+        public async Task<IActionResult> Listado()
         {
-            return await _context.SUPACatAreaDedica.ToListAsync();
+            try
+            {
+                var areasDedica = await _context.SUPACatAreaDedica.ToListAsync();
+                return Ok(areasDedica);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error interno del servidor", error = ex.Message });
+            }
         }
 
         [HttpGet("{id}")]
-        public async Task<ActionResult<SUPACatAreaDedica>> GetSUPACatAreaDedica(int id)
+        public async Task<IActionResult> ListadoporId(int id)
         {
-            var areaDedica = await _context.SUPACatAreaDedica
-                .FirstOrDefaultAsync(a => a.IdCatAreaDedica == id);
-
-            if (areaDedica == null) return NotFound();
-            return areaDedica;
+            try
+            {
+                var areaDedica = await _context.SUPACatAreaDedica.FindAsync(id);
+                if (areaDedica == null)
+                {
+                    return NotFound(new { message = $"No se encontró el área de dedicación con ID {id}" });
+                }
+                return Ok(areaDedica);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error interno del servidor", error = ex.Message });
+            }
         }
 
         [HttpPost]
-        public async Task<ActionResult<SUPACatAreaDedica>> PostSUPACatAreaDedica(SUPACatAreaDedicaViewModel viewModel)
+        public async Task<IActionResult> Create([FromBody] SUPACatAreaDedicaViewModel viewModel)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
                 var parameters = new[]
                 {
                     new SqlParameter("@DAreaDedica", viewModel.DAreaDedica)
                 };
 
-                var result = await _context.Database.SqlQueryRaw<int>(
-                    "EXEC SPSUPA_InsertCatAreaDedica @DAreaDedica",
-                    parameters).FirstOrDefaultAsync();
+                // Usar ExecuteSqlRaw para obtener el ID correcto
+                var result = await _context.Database
+                    .SqlQueryRaw<int>("EXEC SPSUPA_InsertCatAreaDedica @DAreaDedica", parameters)
+                    .ToListAsync();
 
-                var areaDedica = await _context.SUPACatAreaDedica
-                    .FirstOrDefaultAsync(a => a.IdCatAreaDedica == result);
+                var newId = result.FirstOrDefault();
 
-                return CreatedAtAction(nameof(GetSUPACatAreaDedica), new { id = result }, areaDedica);
+                // Obtener el área de dedicación creada para retornarla
+                var areaDedicaCreada = await _context.SUPACatAreaDedica
+                    .FirstOrDefaultAsync(a => a.IdCatAreaDedica == newId);
+
+                return CreatedAtAction(nameof(ListadoporId), new { id = newId }, areaDedicaCreada);
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error al crear el área dedicada: {ex.Message}");
+                return StatusCode(500, new { message = "Error al crear el área de dedicación", error = ex.Message });
             }
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutSUPACatAreaDedica(int id, SUPACatAreaDedicaViewModel viewModel)
+        public async Task<IActionResult> Update(int id, [FromBody] SUPACatAreaDedicaViewModel viewModel)
         {
-            if (viewModel.IdCatAreaDedica.HasValue && id != viewModel.IdCatAreaDedica.Value)
-                return BadRequest("El ID no coincide con el modelo");
-
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
                 var parameters = new[]
                 {
                     new SqlParameter("@IdCatAreaDedica", id),
                     new SqlParameter("@DAreaDedica", viewModel.DAreaDedica)
                 };
 
-                await _context.Database.ExecuteSqlRawAsync(
-                    "EXEC SPSUPA_UpdateCatAreaDedica @IdCatAreaDedica, @DAreaDedica",
-                    parameters);
+                await _context.Database.ExecuteSqlRawAsync("EXEC SPSUPA_UpdateCatAreaDedica @IdCatAreaDedica, @DAreaDedica", parameters);
 
-                return NoContent();
+                return Ok(new { message = "Área de dedicación actualizada correctamente" });
             }
             catch (Exception ex)
             {
-                return BadRequest($"Error al actualizar el área dedicada: {ex.Message}");
+                return StatusCode(500, new { message = "Error al actualizar el área de dedicación", error = ex.Message });
             }
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSUPACatAreaDedica(int id)
+        public async Task<IActionResult> Delete(int id)
         {
-            var areaDedica = await _context.SUPACatAreaDedica.FindAsync(id);
-            if (areaDedica == null) return NotFound();
+            try
+            {
+                var areaDedica = await _context.SUPACatAreaDedica.FindAsync(id);
+                if (areaDedica == null)
+                {
+                    return NotFound(new { message = $"No se encontró el área de dedicación con ID {id}" });
+                }
 
-            _context.SUPACatAreaDedica.Remove(areaDedica);
-            await _context.SaveChangesAsync();
-            return NoContent();
+                _context.SUPACatAreaDedica.Remove(areaDedica);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Área dedicada eliminada correctamente" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al eliminar el área dedicación", error = ex.Message });
+            }
         }
     }
 }
